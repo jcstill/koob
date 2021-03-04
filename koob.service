@@ -1,0 +1,12 @@
+[Unit]
+Description=koob SDH plugs service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/koob
+Restart=on-failure
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,158 @@
+#!/bin/bash
+
+# Control SDH plugs on battery
+# Copyright (C) 2021, Jacob Still jacobcstill@gmail.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see https://www.gnu.org/licenses/
+
+BOOTCONFIG="/boot/config.txt"
+CONFIGDIR="/etc/koob"
+CONFIG="$CONFIGDIR/koob.cfg"
+PROGRAM="${0##*/}"
+VERBOSE=0
+SYSTEMD=0
+STATE="UNDI"
+PLUG="UNDI"
+PIPIN=0
+VERSION=0.02
+
+log(){
+	if [ "$SYSTEMD" == "1" ];then
+		echo "koob.service: ## $@ ##"|systemd-cat -p info
+	elif [ "$VERBOSE" -gt 0 ];then
+		echo "$@"
+	fi
+}
+update(){
+	for i in {0..7};do
+		case $i in
+			0)	PIPIN=15	;;
+			1)	PIPIN=14	;;
+			2)	PIPIN=4		;;
+			3)	PIPIN=3		;;
+			4)	PIPIN=2		;;
+			5)	PIPIN=0		;;
+			6)	PIPIN=0		;;
+			7)	PIPIN=0		;;
+		esac
+		log "setting plug $PLUG (pin $PIPIN) to $STATE"
+		STATE="$(grep PLUG"$i" < "$CONFIG" | awk '{print $2}')"
+		raspi-gpio set "$PIPIN" "$STATE"
+		sleep 0.05
+	done
+}
+display(){
+	for i in {0..7};do
+		STATE="$(grep PLUG"$i" < "$CONFIG" | awk '{print $2}')"
+		if [ "$STATE" == "dh" ];then
+			STATE=1
+		elif [ "$STATE" == "dl" ];then
+			STATE=0
+		fi
+		printf "plug %s: %s\n" "$i" "$STATE"
+	done
+	exit
+}
+usage(){
+	show_ver
+	printf "\nUsage: %s PARAMETERS... [OPTIONS]\n" "$PROGRAM"
+	printf "back up host and VMs to a LUKS crypt device\n\n"
+	printf "Options:\n"
+	printf "  -p, --plug [0..7|all]  plug to select (requires state option)\n"
+	printf "  -s, --state [on|off]   turn selected plug on or off (requires plug option)\n\n"
+	printf "  -S, --show             show status of plugs\n"
+	printf "  -h, --help             specific command help\n"
+	# printf "  -v, --verbose          be verbose in output\n"
+	printf "  -V, --version          show version and exit\n"
+	exit
+}
+show_ver(){
+	printf "%s v%s Copyright (C) 2021, Jacob Still jacobcstill@gmail.com\n" "$PROGRAM" "$VERSION"
+}
+
+opts="$(getopt -o Sp:s:vVfh -l show,plug:,state:,version,help,verbose,force -n "$PROGRAM" -- "$@" 2>/dev/null)"
+err=$?
+if [ $err -ne 0 ];then
+	usage
+	exit
+fi
+eval set -- "$opts"
+while true; do case $1 in
+	-p|--plug) PLUG="$2"; shift; shift;;
+	-s|--state) STATE="$2"; shift; shift;;
+	-h|--help) usage ;;
+	-S|--show) display ;;
+	-v|--verbose) VERBOSE=$((VERBOSE+1)); shift ;;
+	-V|--version) show_ver; exit;;
+	--) shift; break ;;
+esac done
+
+log "starting service"
+
+if [ "$EUID" -ne 0 ];then
+	>&2 printf "\e[38;2;255;0;0m[!]\e[0m Please run as root\n"
+	exit 1
+fi
+
+if [ -z "$(grep "gpio=0-27=op,dl" $BOOTCONFIG|grep -v "^#")" ];then
+	log "adding to $BOOTCONFIG"
+	printf "# koob pins interfacing\ngpio=0-27=op,dl\n"|sudo tee -a "$BOOTCONFIG"
+fi
+if [ ! -d "$CONFIGDIR" ];then
+	log "creating $CONFIGDIR"
+	mkdir -p "$CONFIGDIR"
+fi
+if [ ! -f "$CONFIG" ];then
+	log "creating $CONFIG"
+	touch "$CONFIG"
+	printf "# koob pins interfacing - don't edit\n">"$CONFIG"
+	printf "PLUG0           dl\n">>"$CONFIG"
+	printf "PLUG1           dl\n">>"$CONFIG"
+	printf "PLUG2           dl\n">>"$CONFIG"
+	printf "PLUG3           dl\n">>"$CONFIG"
+	printf "PLUG4           dl\n">>"$CONFIG"
+	printf "PLUG5           dl\n">>"$CONFIG"
+	printf "PLUG6           dl\n">>"$CONFIG"
+	printf "PLUG7           dl\n">>"$CONFIG"
+	log "new settings will take effect on next boot"
+fi
+
+if [ "$STATE" != "UNDI" ];then
+	if [ "$STATE" == "on" ] || [ "$STATE" == "ON" ] || [ "$STATE" == "On" ] || [ "$STATE" == "1" ];then
+		STATE=dh
+	elif [ "$STATE" == "off" ] || [ "$STATE" == "OFF" ] || [ "$STATE" == "Off" ] || [ "$STATE" == "0" ];then
+		STATE=dl
+	else
+		log "error in state"
+		exit
+	fi
+	if [ "$PLUG" == "all" ] || [ "$PLUG" == "All" ] || [ "$PLUG" == "ALL" ] || [ "$PLUG" == "a" ] || [ "$PLUG" == "A" ];then
+		for i in {0..7};do
+			sed -i "$(grep -n PLUG"$i" < "$CONFIG"|tr ':' ' '|awk '{print $1}')s/.*/PLUG$i           $STATE/" "$CONFIG"
+		done
+	elif [ "$PLUG" != "UNDI" ];then
+		re='^[0-9]+$'
+		if ! [[ $PLUG =~ $re ]] ; then
+			log "error in plug"
+			exit
+		fi
+		if [ "$PLUG" -lt 0 ] || [ "$PLUG" -gt 7 ]; then
+			log "error in plug"
+			exit
+		fi
+		sed -i "$(grep -n PLUG"$PLUG" < "$CONFIG"|tr ':' ' '|awk '{print $1}')s/.*/PLUG$PLUG           $STATE/" "$CONFIG"
+	fi
+fi
+
+update
