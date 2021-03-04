@@ -29,7 +29,7 @@ VERSION=0.02
 
 log(){
 	if [ "$SYSTEMD" == "1" ];then
-		echo "koob.service: ## $@ ##"|systemd-cat -p info
+		echo "$PROGRAM.services: ## $@ ##"|systemd-cat -p info
 	elif [ "$VERBOSE" -gt 0 ];then
 		echo "$@"
 	fi
@@ -46,8 +46,8 @@ update(){
 			6)	PIPIN=0		;;
 			7)	PIPIN=0		;;
 		esac
-		log "setting plug $PLUG (pin $PIPIN) to $STATE"
 		STATE="$(grep PLUG"$i" < "$CONFIG" | awk '{print $2}')"
+		log "setting plug $i (pin $PIPIN) to $STATE"
 		raspi-gpio set "$PIPIN" "$STATE"
 		sleep 0.05
 	done
@@ -67,7 +67,7 @@ display(){
 usage(){
 	show_ver
 	printf "\nUsage: %s PARAMETERS... [OPTIONS]\n" "$PROGRAM"
-	printf "back up host and VMs to a LUKS crypt device\n\n"
+	printf "Control Software Defined Hardware (SDH) plugs on battery backup UPS\n\n"
 	printf "Options:\n"
 	printf "  -p, --plug [0..7|all]  plug to select (requires state option)\n"
 	printf "  -s, --state [on|off]   turn selected plug on or off (requires plug option)\n\n"
@@ -81,7 +81,7 @@ show_ver(){
 	printf "%s v%s Copyright (C) 2021, Jacob Still jacobcstill@gmail.com\n" "$PROGRAM" "$VERSION"
 }
 
-opts="$(getopt -o Sp:s:vVfh -l show,plug:,state:,version,help,verbose,force -n "$PROGRAM" -- "$@" 2>/dev/null)"
+opts="$(getopt -o Sp:s:vVfh -l systemd,show,plug:,state:,version,help,verbose,force -n "$PROGRAM" -- "$@" 2>/dev/null)"
 err=$?
 if [ $err -ne 0 ];then
 	usage
@@ -95,6 +95,7 @@ while true; do case $1 in
 	-S|--show) display ;;
 	-v|--verbose) VERBOSE=$((VERBOSE+1)); shift ;;
 	-V|--version) show_ver; exit;;
+	--systemd) SYSTEMD=1; shift;;
 	--) shift; break ;;
 esac done
 

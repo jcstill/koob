@@ -3,7 +3,7 @@ Description=koob SDH plugs service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/koob
+ExecStart=/usr/bin/koob --systemd
 Restart=on-failure
 RestartSec=10
 KillMode=process
