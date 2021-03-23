@@ -69,11 +69,11 @@ usage(){
 	printf "\nUsage: %s PARAMETERS... [OPTIONS]\n" "$PROGRAM"
 	printf "Control Software Defined Hardware (SDH) plugs on battery backup UPS\n\n"
 	printf "Options:\n"
-	printf "  -p, --plug [0..7|all]  plug to select (requires state option)\n"
-	printf "  -s, --state [on|off]   turn selected plug on or off (requires plug option)\n\n"
+	printf "  -p, --plug [0..7|all]  plug to control (requires state option)\n"
+	printf "  -s, --state [on|off]   turn plug on or off (requires plug option)\n\n"
 	printf "  -S, --show             show status of plugs\n"
-	printf "  -h, --help             specific command help\n"
-	# printf "  -v, --verbose          be verbose in output\n"
+	printf "  -h, --help             print this help text\n"
+	printf "  -v, --verbose          be verbose in output\n"
 	printf "  -V, --version          show version and exit\n"
 	exit
 }

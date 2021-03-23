@@ -1,0 +1,65 @@
+.\"manpage by Jacob Still
+.TH "KOOB" "8" "2020-03-22" "v0.02" "koob manual"
+
+.SH NAME
+koob \- Control Software Defined Hardware power plugs on custom battery backup UPS
+
+.SH SYNOPSIS
+.B koob
+PARAMETERS... [\fI\,OPTIONS\/\fR]
+
+.SH DESCRIPTION
+.PP
+Control Software Defined Hardware power plugs on custom battery backup UPS.
+.PP
+When no parameters or options are passed, updates plugs based on configuratiuon in /etc/koob/koob.cfg
+
+.SH OPTIONS
+.TP
+\fB\-p\fR, \fB\-\-plug\fR [\fB0..7\fR|\fBall\fR]
+plug to control, requires state option
+.TP
+\fB\-s\fR, \fB\-\-state\fR [\fBon\fR|\fBoff\fR]
+turn plug on or off, requires plug option
+.TP
+\fB\-S\fR, \fB\-\-show\fR
+show status of plugs
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+show help text
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+be verbose in output
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+show version and exit - currently does nothing
+.TP
+\fB\-\-systemd\fR
+log using systemd-cat, this option should be used by itself and only in koob.service
+
+.SH EXAMPLES
+.TP
+koob -p 0 -s on
+Turns plug 0 on
+.TP
+koob -p all -s off
+Turns all plugs off
+
+.SH FILES
+.PP
+koob uses /etc/koob/koob.cfg to store state of the plugs - this may be changed in the future
+
+.SH AUTHOR
+Written by Jacob Still
+
+.SH BUGS
+All bugs or requests should go through the gitea page: <https://gitea.jcstill.com/>
+
+.SH COPYRIGHT
+.PP
+Copyright \(co 2021 Jacob Still jacobcstill@gmail.com
+.PP
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+.PP
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
