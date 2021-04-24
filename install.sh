@@ -1,5 +1,8 @@
 #!/bin/bash
-
+if [ "$EUID" -ne 0 ];then
+	>&2 printf "\e[38;2;255;0;0m[!]\e[0m Please run as root\n"
+	exit 1
+fi
 cp koob /usr/bin/
 cp koob.service /etc/systemd/system/
 chmod 640 /etc/systemd/system/koob.service
